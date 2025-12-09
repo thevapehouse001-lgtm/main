@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               Int       @id @default(autoincrement())
+  telegram_id      String    @unique
+  username         String?   
+  first_name       String?   
+  last_name        String?   
+  deposit_address  String    @unique
+  deposit_secret   String?
+  balance_huf      Int       @default(0)
+  is_admin         Boolean   @default(false)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+  orders           Order[]
+  transactions     Transaction[]
+  eventLogs        EventLog[]
+}
+
+model City {
+  id         Int       @id @default(autoincrement())
+  name       String
+  is_active  Boolean   @default(true)
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  products   Product[]
+  orders     Order[]
+}
+
+model Product {
+  id          Int       @id @default(autoincrement())
+  city        City      @relation(fields: [city_id], references: [id])
+  city_id     Int
+  name        String
+  description String
+  price_huf   Int
+  images      String[]
+  address     String
+  is_active   Boolean   @default(true)
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id         Int        @id @default(autoincrement())
+  user       User       @relation(fields: [user_id], references: [id])
+  user_id    Int
+  city       City       @relation(fields: [city_id], references: [id])
+  city_id    Int
+  total_huf  Int
+  status     OrderStatus @default(pending)
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
+  items      OrderItem[]
+}
+
+enum OrderStatus {
+  pending
+  paid
+  processing
+  done
+  cancelled
+}
+
+model OrderItem {
+  id         Int     @id @default(autoincrement())
+  order      Order   @relation(fields: [order_id], references: [id])
+  order_id   Int
+  product    Product @relation(fields: [product_id], references: [id])
+  product_id Int
+  price_huf  Int
+  quantity   Int
+}
+
+model Transaction {
+  id              Int      @id @default(autoincrement())
+  user            User     @relation(fields: [user_id], references: [id])
+  user_id         Int
+  type            TransactionType
+  amount_huf      Int
+  raw_crypto_amount String?
+  crypto_symbol   String?
+  tx_hash         String?
+  metadata_json   Json?
+  created_at      DateTime @default(now())
+}
+
+enum TransactionType {
+  deposit
+  purchase
+  manual_adjustment
+}
+
+model EventLog {
+  id            Int      @id @default(autoincrement())
+  user          User?    @relation(fields: [user_id], references: [id])
+  user_id       Int?
+  event_type    String
+  metadata_json Json?
+  created_at    DateTime @default(now())
+}
